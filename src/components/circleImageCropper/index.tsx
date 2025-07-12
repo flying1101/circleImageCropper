@@ -84,12 +84,15 @@ export default function CircleImageCropper() {
     ctx.arc(CIRCLE_RADIUS, CIRCLE_RADIUS, CIRCLE_RADIUS, 0, Math.PI * 2);
     ctx.closePath();
     ctx.clip();
-    // 计算图片在裁剪框中的位置
+    // 计算图片在裁剪框中的位置（修正）
     const imgW = image.width * scale;
     const imgH = image.height * scale;
     const offsetX = position.x + (CROP_SIZE - imgW) / 2;
     const offsetY = position.y + (CROP_SIZE - imgH) / 2;
-    ctx.drawImage(image, offsetX, offsetY, imgW, imgH);
+    // 修正：将大画布中心的内容平移到小画布中心
+    const cropOffsetX = offsetX - (CROP_SIZE / 2 - CIRCLE_RADIUS);
+    const cropOffsetY = offsetY - (CROP_SIZE / 2 - CIRCLE_RADIUS);
+    ctx.drawImage(image, cropOffsetX, cropOffsetY, imgW, imgH);
     ctx.restore();
     // 下载
     const link = document.createElement("a");
