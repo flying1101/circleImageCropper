@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface TextElement {
   id: string;
@@ -28,6 +28,10 @@ export default function AddTextToPhoto() {
   const [fontFamily] = useState('Arial');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const [imageScale, setImageScale] = useState({ scaleX: 1, scaleY: 1 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   const fonts = [
     'Arial',
@@ -39,6 +43,23 @@ export default function AddTextToPhoto() {
     'Impact',
     'Comic Sans MS'
   ];
+
+  // 计算图片缩放比例
+  useEffect(() => {
+    if (selectedImage && imageContainerRef.current) {
+      const img = new window.Image();
+      img.onload = () => {
+        const container = imageContainerRef.current;
+        if (container) {
+          const containerRect = container.getBoundingClientRect();
+          const scaleX = img.width / containerRect.width;
+          const scaleY = img.height / containerRect.height;
+          setImageScale({ scaleX, scaleY });
+        }
+      };
+      img.src = selectedImage;
+    }
+  }, [selectedImage]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -95,6 +116,49 @@ export default function AddTextToPhoto() {
     setSelectedTextId(null);
   };
 
+  // 改进的拖拽处理
+  const handleMouseDown = (e: React.MouseEvent, elementId: string) => {
+    e.preventDefault();
+    setIsDragging(true);
+    selectText(elementId);
+    
+    const rect = imageContainerRef.current?.getBoundingClientRect();
+    if (rect) {
+      const element = textElements.find(el => el.id === elementId);
+      if (element) {
+        setDragOffset({
+          x: e.clientX - rect.left - element.x,
+          y: e.clientY - rect.top - element.y
+        });
+      }
+    }
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !selectedTextId || !imageContainerRef.current) return;
+
+    const rect = imageContainerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left - dragOffset.x;
+    const y = e.clientY - rect.top - dragOffset.y;
+    
+    updateTextPosition(selectedTextId, x, y);
+  }, [isDragging, selectedTextId, dragOffset]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   const downloadImage = useCallback(() => {
     if (!canvasRef.current || !selectedImage) return;
 
@@ -110,11 +174,43 @@ export default function AddTextToPhoto() {
       // Draw image
       ctx.drawImage(img, 0, 0);
       
-      // Draw text elements
+      // Draw text elements with proper scaling and styling
       textElements.forEach(element => {
-        ctx.font = `${element.fontSize}px ${element.fontFamily}`;
+        // 计算实际位置（考虑缩放）
+        const actualX = element.x * imageScale.scaleX;
+        const actualY = element.y * imageScale.scaleY;
+        const actualFontSize = element.fontSize * imageScale.scaleX;
+        
+        // 设置字体样式
+        let fontStyle = '';
+        if (element.italic) fontStyle += 'italic ';
+        if (element.bold) fontStyle += 'bold ';
+        fontStyle += `${actualFontSize}px ${element.fontFamily}`;
+        
+        ctx.font = fontStyle;
         ctx.fillStyle = element.color;
-        ctx.fillText(element.text, element.x, element.y);
+        ctx.globalAlpha = element.opacity ?? 1;
+        
+        // 设置文本对齐
+        ctx.textAlign = element.align || 'left';
+        
+        // 绘制文本
+        ctx.fillText(element.text, actualX, actualY);
+        
+        // 绘制下划线
+        if (element.underline) {
+          const metrics = ctx.measureText(element.text);
+          const underlineY = actualY + 2;
+          ctx.strokeStyle = element.color;
+          ctx.lineWidth = Math.max(1, actualFontSize / 20);
+          ctx.beginPath();
+          ctx.moveTo(actualX, underlineY);
+          ctx.lineTo(actualX + metrics.width, underlineY);
+          ctx.stroke();
+        }
+        
+        // 重置透明度
+        ctx.globalAlpha = 1;
       });
 
       // Download
@@ -124,7 +220,7 @@ export default function AddTextToPhoto() {
       link.click();
     };
     img.src = selectedImage;
-  }, [selectedImage, textElements]);
+  }, [selectedImage, textElements, imageScale]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -326,7 +422,7 @@ export default function AddTextToPhoto() {
 
               <div className="relative border-2 border-dashed border-gray-300 rounded-lg min-h-[400px] flex items-center justify-center">
                 {selectedImage ? (
-                  <div className="relative inline-block">
+                  <div ref={imageContainerRef} className="relative inline-block">
                     <img
                       src={selectedImage}
                       alt="Uploaded"
@@ -349,16 +445,13 @@ export default function AddTextToPhoto() {
                           fontStyle: element.italic ? 'italic' : 'normal',
                           textDecoration: element.underline ? 'underline' : 'none',
                           opacity: element.opacity,
+                          userSelect: 'none',
+                          pointerEvents: 'auto'
                         }}
-                        onClick={() => selectText(element.id)}
-                        draggable
-                        onDragEnd={(e) => {
-                          const rect = e.currentTarget.parentElement?.getBoundingClientRect();
-                          if (rect) {
-                            const x = e.clientX - rect.left;
-                            const y = e.clientY - rect.top;
-                            updateTextPosition(element.id, x, y);
-                          }
+                        onMouseDown={(e) => handleMouseDown(e, element.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          selectText(element.id);
                         }}
                       >
                         {element.text}
