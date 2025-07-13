@@ -102,114 +102,53 @@ export default function CircleImageCropper() {
   };
 
   return (
-    <div style={{ 
-      maxWidth: 480, 
-      margin: "40px auto", 
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      minHeight: "100vh",
-      padding: "20px"
-    }}>
-      <div style={{
-        background: "rgba(255,255,255,0.95)",
-        borderRadius: 20,
-        padding: "32px",
-        boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-        backdropFilter: "blur(10px)"
-      }}>
+    <div className="max-w-[480px] mx-auto mt-10 font-sans bg-gradient-to-br from-indigo-400 to-purple-600 min-h-screen p-5">
+      <div className="bg-white/95 rounded-2xl p-8 shadow-[0_20px_40px_rgba(0,0,0,0.1)] backdrop-blur">
         <label
-          style={{
-            display: "block",
-            border: "2px dashed #667eea",
-            borderRadius: 16,
-            padding: "40px 0",
-            textAlign: "center",
-            fontSize: 20,
-            marginBottom: 32,
-            cursor: "pointer",
-            background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-            transition: "all 0.3s ease",
-            color: "#4a5568",
-            fontWeight: 500
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow = "0 8px 25px rgba(102, 126, 234, 0.3)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
+          className="block border-2 border-dashed border-indigo-400 rounded-xl py-10 text-center text-xl mb-8 cursor-pointer bg-gradient-to-br from-gray-100 to-gray-300 transition-all duration-300 text-gray-700 font-medium hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(102,126,234,0.3)]"
         >
           <input
             type="file"
             accept="image/*"
-            style={{ display: "none" }}
+            className="hidden"
             onChange={handleFileChange}
           />
-          <span role="img" aria-label="upload" style={{ fontSize: 36, marginRight: 12, display: "block", marginBottom: 8 }}>📷</span>
+          <span role="img" aria-label="upload" className="text-4xl mr-3 block mb-2">📷</span>
           点击上传图片
         </label>
 
         {image && (
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                width: CROP_SIZE,
-                height: CROP_SIZE,
-                margin: "0 auto",
-                borderRadius: 20,
-                background: "#fff",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-                position: "relative",
-                userSelect: "none",
-                border: "1px solid rgba(255,255,255,0.2)"
-              }}
-            >
+          <div className="text-center">
+            <div className="relative mx-auto" style={{ width: CROP_SIZE, height: CROP_SIZE }}>
               <canvas
                 ref={canvasRef}
                 width={CROP_SIZE}
                 height={CROP_SIZE}
-                style={{
-                  width: CROP_SIZE,
-                  height: CROP_SIZE,
-                  display: "block",
-                  borderRadius: 20,
-                  cursor: dragging ? "grabbing" : "grab",
-                  background: "#fff",
-                }}
+                className={`block rounded-2xl ${dragging ? "cursor-grabbing" : "cursor-grab"} bg-white shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-white/20`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                style={{ width: CROP_SIZE, height: CROP_SIZE }}
               />
               {/* 圆形边框 - 更美观的设计 */}
               <div
+                className="absolute pointer-events-none box-border"
                 style={{
-                  position: "absolute",
                   left: CROP_SIZE / 2 - CIRCLE_RADIUS,
                   top: CROP_SIZE / 2 - CIRCLE_RADIUS,
                   width: CIRCLE_RADIUS * 2,
                   height: CIRCLE_RADIUS * 2,
                   borderRadius: "50%",
                   border: "3px solid #fff",
-                  boxSizing: "border-box",
-                  pointerEvents: "none",
                   boxShadow: "0 0 0 2px #667eea, 0 4px 12px rgba(102, 126, 234, 0.3)",
                 }}
               />
             </div>
             
             {/* 缩放控制 */}
-            <div style={{ margin: "24px 0", padding: "0 20px" }}>
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "space-between",
-                marginBottom: 8,
-                color: "#4a5568",
-                fontSize: 14
-              }}>
+            <div className="my-6 px-5">
+              <div className="flex items-center justify-between mb-2 text-gray-700 text-sm">
                 <span>缩小</span>
                 <span>放大</span>
               </div>
@@ -220,60 +159,20 @@ export default function CircleImageCropper() {
                 step={0.01}
                 value={scale}
                 onChange={e => setScale(Number(e.target.value))}
-                style={{ 
-                  width: "100%", 
-                  height: 6,
-                  borderRadius: 3,
-                  background: "linear-gradient(to right, #667eea, #764ba2)",
-                  outline: "none",
-                  cursor: "pointer"
-                }}
+                className="w-full h-1.5 rounded bg-gradient-to-r from-indigo-400 to-purple-600 outline-none cursor-pointer"
               />
             </div>
             
             <div>
               <button
                 onClick={handleCrop}
-                style={{
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "#fff",
-                  fontSize: 18,
-                  border: "none",
-                  borderRadius: 12,
-                  padding: "16px 32px",
-                  width: "100%",
-                  margin: "16px 0",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  transition: "all 0.3s ease",
-                  boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(102, 126, 234, 0.6)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 4px 15px rgba(102, 126, 234, 0.4)";
-                }}
+                className="bg-gradient-to-br from-indigo-400 to-purple-600 text-white text-lg border-none rounded-xl py-4 px-8 w-full my-4 cursor-pointer font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-[0_4px_15px_rgba(102,126,234,0.4)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(102,126,234,0.6)]"
               >
-                <span role="img" aria-label="download" style={{ fontSize: 20 }}>💾</span>
+                <span role="img" aria-label="download" className="text-xl">💾</span>
                 裁剪并下载
               </button>
             </div>
-            <div style={{ 
-              color: "#718096", 
-              fontSize: 14, 
-              marginTop: 16,
-              padding: "12px",
-              background: "rgba(102, 126, 234, 0.1)",
-              borderRadius: 8,
-              border: "1px solid rgba(102, 126, 234, 0.2)"
-            }}>
+            <div className="text-gray-500 text-sm mt-4 p-3 bg-indigo-400/10 rounded border border-indigo-400/20">
               ✨ 图片已加载，可拖动调整位置，使用滑块缩放图片
             </div>
           </div>

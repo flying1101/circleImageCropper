@@ -1,0 +1,413 @@
+'use client';
+
+import { useState, useRef, useCallback } from 'react';
+
+interface TextElement {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  fontFamily: string;
+  isSelected: boolean;
+  align?: 'left' | 'center' | 'right';
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  opacity?: number;
+}
+
+export default function AddTextToPhoto() {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [textElements, setTextElements] = useState<TextElement[]>([]);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [textInput, setTextInput] = useState('');
+  const [fontSize] = useState(32);
+  const [textColor, setTextColor] = useState('#000000');
+  const [fontFamily] = useState('Arial');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const fonts = [
+    'Arial',
+    'Helvetica',
+    'Times New Roman',
+    'Georgia',
+    'Verdana',
+    'Courier New',
+    'Impact',
+    'Comic Sans MS'
+  ];
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSelectedImage(e.target?.result as string);
+        setTextElements([]);
+        setSelectedTextId(null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const addText = () => {
+    if (textInput.trim()) {
+      const newText: TextElement = {
+        id: Date.now().toString(),
+        text: textInput,
+        x: 100,
+        y: 100,
+        fontSize,
+        color: textColor,
+        fontFamily,
+        isSelected: false
+      };
+      setTextElements([...textElements, newText]);
+      setTextInput('');
+    }
+  };
+
+  const selectText = (id: string) => {
+    setSelectedTextId(id);
+    setTextElements(textElements.map(text => ({
+      ...text,
+      isSelected: text.id === id
+    })));
+  };
+
+  const updateTextPosition = (id: string, x: number, y: number) => {
+    setTextElements(textElements.map(text =>
+      text.id === id ? { ...text, x, y } : text
+    ));
+  };
+
+  const updateTextProperty = (id: string, property: keyof TextElement, value: TextElement[keyof TextElement]) => {
+    setTextElements(textElements.map(text =>
+      text.id === id ? { ...text, [property]: value } : text
+    ));
+  };
+
+  const deleteText = (id: string) => {
+    setTextElements(textElements.filter(text => text.id !== id));
+    setSelectedTextId(null);
+  };
+
+  const downloadImage = useCallback(() => {
+    if (!canvasRef.current || !selectedImage) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new window.Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Draw image
+      ctx.drawImage(img, 0, 0);
+      
+      // Draw text elements
+      textElements.forEach(element => {
+        ctx.font = `${element.fontSize}px ${element.fontFamily}`;
+        ctx.fillStyle = element.color;
+        ctx.fillText(element.text, element.x, element.y);
+      });
+
+      // Download
+      const link = document.createElement('a');
+      link.download = 'edited-image.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    };
+    img.src = selectedImage;
+  }, [selectedImage, textElements]);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <h1 className="text-2xl font-bold text-gray-900">Add Text to Photo</h1>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Upload Image
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Panel - Tools */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
+              <h2 className="text-lg font-semibold text-gray-900">Text Tools</h2>
+              
+              {/* Add Text */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-black">Add New Text</h3>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    placeholder="Enter text..."
+                    className="flex-1 px-3 py-2 border text-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={addText}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Text Properties */}
+              {selectedTextId && (
+                <div className="space-y-4 border-t pt-4">
+                  {/* Font Size */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-gray-700">Font Size</h3>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="range"
+                        min="8"
+                        max="120"
+                        value={textElements.find(t => t.id === selectedTextId)?.fontSize ?? 32}
+                        onChange={(e) => updateTextProperty(selectedTextId, 'fontSize', Number(e.target.value))}
+                        className="flex-1"
+                      />
+                      <span className="text-sm text-gray-600 w-12 text-right">
+                        {textElements.find(t => t.id === selectedTextId)?.fontSize ?? 32}px
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Font Family */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-gray-700">Font Family</h3>
+                    <select
+                      value={textElements.find(t => t.id === selectedTextId)?.fontFamily ?? 'Arial'}
+                      onChange={(e) => updateTextProperty(selectedTextId, 'fontFamily', e.target.value)}
+                      className="w-full px-3 py-2 border text-black rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {fonts.map((font) => (
+                        <option key={font} value={font} style={{ fontFamily: font }}>
+                          {font}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <h3 className="text-sm font-medium text-gray-700">Text Color</h3>
+                  <div className="flex space-x-3">
+                    {['#000', '#fff', '#f44336', '#2196f3', '#4caf50', '#ffc107', '#a259ff', '#e75480'].map((color) => (
+                      <button
+                        key={color}
+                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center
+                          ${textColor === color ? 'border-black' : 'border-transparent'}`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => {
+                          setTextColor(color);
+                          if (selectedTextId) updateTextProperty(selectedTextId, 'color', color);
+                        }}
+                      />
+                    ))}
+                  </div>
+                  {/* 颜色条 */}
+                  <div className="h-8 rounded border mt-2" style={{ background: textColor }} />
+
+                  {/* Text Alignment */}
+                  <h3 className="text-sm font-medium text-black mt-4">Text Alignment</h3>
+                  <div className="flex space-x-2">
+                    {(['left', 'center', 'right'] as const).map((align) => (
+                      <button
+                        key={align}
+                        className={`w-10 h-10 border rounded flex items-center justify-center text-black 
+                          ${textElements.find(t => t.id === selectedTextId)?.align === align ? 'border-pink-600' : 'text-black'}`}
+                        onClick={() => updateTextProperty(selectedTextId, 'align', align)}
+                      >
+                        {align === 'left' && (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M15 15H3v2h12v-2zm0-8H3v2h12V7zm0 4H3v2h12v-2z"/>
+                          </svg>
+                        )}
+                        {align === 'center' && (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M7 15h10v2H7v-2zm0-8h10v2H7V7zm0 4h10v2H7v-2z"/>
+                          </svg>
+                        )}
+                        {align === 'right' && (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 15h12v2H3v-2zm0-8h12v2H3V7zm0 4h12v2H3v-2z"/>
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Text Style */}
+                  <h3 className="text-sm font-medium text-black mt-4">Text Style</h3>
+                  <div className="flex space-x-2">
+                    <button
+                      className={`w-10 h-10 border rounded  text-black font-bold ${textElements.find(t => t.id === selectedTextId)?.bold ? 'border-pink-600' : 'text-black'}`}
+                      onClick={() => updateTextProperty(selectedTextId, 'bold', !textElements.find(t => t.id === selectedTextId)?.bold)}
+                    >B</button>
+                    <button
+                      className={`w-10 h-10 border text-black rounded italic ${textElements.find(t => t.id === selectedTextId)?.italic ? 'border-pink-600' : 'text-black'}`}
+                      onClick={() => updateTextProperty(selectedTextId, 'italic', !textElements.find(t => t.id === selectedTextId)?.italic)}
+                    >I</button>
+                    <button
+                      className={`w-10 h-10 border  text-black rounded underline ${textElements.find(t => t.id === selectedTextId)?.underline ? 'border-pink-600' : 'text-black'}`}
+                      onClick={() => updateTextProperty(selectedTextId, 'underline', !textElements.find(t => t.id === selectedTextId)?.underline)}
+                    >U</button>
+                  </div>
+
+                  {/* Opacity */}
+                  <h3 className="text-sm font-medium text-gray-700 mt-4">Opacity</h3>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1"
+                    step="0.01"
+                    value={textElements.find(t => t.id === selectedTextId)?.opacity ?? 1}
+                    onChange={e => updateTextProperty(selectedTextId, 'opacity', Number(e.target.value))}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>10%</span>
+                    <span>100%</span>
+                    <span>{Math.round((textElements.find(t => t.id === selectedTextId)?.opacity ?? 1) * 100)}%</span>
+                  </div>
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={() => deleteText(selectedTextId)}
+                    className="w-full bg-red-500 text-white px-4 py-2 rounded-lg flex items-center justify-center mt-4"
+                  >
+                    <span className="material-icons mr-2">delete</span> Delete Text
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Center Panel - Image Editor */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Image Editor</h2>
+                {selectedImage && (
+                  <button
+                    onClick={downloadImage}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Download Image
+                  </button>
+                )}
+              </div>
+
+              <div className="relative border-2 border-dashed border-gray-300 rounded-lg min-h-[400px] flex items-center justify-center">
+                {selectedImage ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={selectedImage}
+                      alt="Uploaded"
+                      className="max-w-full max-h-[600px] object-contain"
+                    />
+                    {textElements.map((element) => (
+                      <div
+                        key={element.id}
+                        className={`absolute cursor-move select-none ${
+                          element.isSelected ? 'ring-2 ring-blue-500' : ''
+                        }`}
+                        style={{
+                          left: element.x,
+                          top: element.y,
+                          fontSize: element.fontSize,
+                          color: element.color,
+                          fontFamily: element.fontFamily,
+                          textAlign: element.align,
+                          fontWeight: element.bold ? 'bold' : 'normal',
+                          fontStyle: element.italic ? 'italic' : 'normal',
+                          textDecoration: element.underline ? 'underline' : 'none',
+                          opacity: element.opacity,
+                        }}
+                        onClick={() => selectText(element.id)}
+                        draggable
+                        onDragEnd={(e) => {
+                          const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+                          if (rect) {
+                            const x = e.clientX - rect.left;
+                            const y = e.clientY - rect.top;
+                            updateTextPosition(element.id, x, y);
+                          }
+                        }}
+                      >
+                        {element.text}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <div className="text-gray-400 mb-4">
+                      <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-600">Click &quot;Upload Image&quot; to get started</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Text Elements List */}
+        {textElements.length > 0 && (
+          <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Text Elements</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {textElements.map((element) => (
+                <div
+                  key={element.id}
+                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                    element.isSelected
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => selectText(element.id)}
+                >
+                  <p className="font-medium text-sm text-gray-900 truncate">{element.text}</p>
+                  <p className="text-xs text-gray-500">
+                    {element.fontFamily} • {element.fontSize}px
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Hidden Canvas for Download */}
+      <canvas ref={canvasRef} className="hidden" />
+    </div>
+  );
+}
