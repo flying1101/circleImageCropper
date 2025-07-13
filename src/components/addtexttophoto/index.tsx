@@ -327,6 +327,35 @@ export default function AddTextToPhoto() {
                       />
                     ))}
                   </div>
+                  
+                  {/* 自定义颜色选择器 */}
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-xs text-black">Custom Color:</label>
+                      <input
+                        type="color"
+                        value={textColor}
+                        onChange={(e) => {
+                          const newColor = e.target.value;
+                          setTextColor(newColor);
+                          if (selectedTextId) updateTextProperty(selectedTextId, 'color', newColor);
+                        }}
+                        className="w-8 h-8 border text-black border-gray-300 rounded cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={textColor}
+                        onChange={(e) => {
+                          const newColor = e.target.value;
+                          setTextColor(newColor);
+                          if (selectedTextId) updateTextProperty(selectedTextId, 'color', newColor);
+                        }}
+                        placeholder="#000000"
+                        className="flex-1 px-2 py-1 text-xs border text-black border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  
                   {/* 颜色条 */}
                   <div className="h-8 rounded border mt-2" style={{ background: textColor }} />
 
